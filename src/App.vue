@@ -2,7 +2,7 @@
 
                   This file is part of the Flight Level Calcualtor.
 
-         flcalc computes flight levels from pressure and ground alititude.
+             flcalc computes flight levels from pressure at sea level.
                       Copyright (c) 2023, Joseph Coffland
                                All rights reserved.
 
@@ -32,8 +32,8 @@ function pressure_offset(pressure) {
 }
 
 
-function flight_level(level, ground, pressure) {
-  let x = level + ground + pressure_offset(pressure)
+function flight_level(level, pressure) {
+  let x = level + pressure_offset(pressure)
   return Math.round(x).toLocaleString() + 'm'
 }
 
@@ -42,8 +42,9 @@ export default {
   data() {
     return {
       level: 65,
-      ground: 80,
-      pressure: 1013
+      pressure: 1013,
+      lat: 60.44,
+      lng: 25.07
     }
   },
 
@@ -66,7 +67,7 @@ export default {
         row.push(pressure.toLocaleString() + 'hpa')
 
         for (let j = 0; j < 11; j++)
-          row.push(flight_level(levels[j] * 30.48, this.ground, pressure))
+          row.push(flight_level(levels[j] * 30.48, pressure))
 
         row.push(Math.round(pressure_offset(pressure)) + 'm')
 
@@ -82,6 +83,16 @@ export default {
 
 
   methods: {
+    get_pressure() {
+      let url = 'https://barometer-server-ldgtl.ondigitalocean.app'
+      url += '/weather/timelineWK?lat=' + this.lat + '&lng=' + this.lng
+      fetch(url)
+        .then(r => r.json())
+        .then(data => {
+          let p = data.forecastData[0].values.pressureSeaLevel
+          this.pressure = Math.round(p * 338.6) / 10
+        })
+    }
   }
 }
 </script>
@@ -89,26 +100,39 @@ export default {
 <template lang="pug">
 .flcalc
   h1 Flight Level Calculator
-  strong (Below transition level)
+  h2 Input
 
   fieldset
-    label.label Flight Level
-    input(type="number", v-model="level")
-    label.unit 100s of feet
+    legend Compute flight levels from pressure
 
-    label.label Ground Level
-    input(type="number", v-model="ground")
-    label.unit meters
+    label.label Flight Level
+    input(type="number", v-model="level", step="5")
+    label.unit 100s of feet
 
     label.label Sea Level Pressure
     input(type="number", v-model="pressure")
-    label.unit hpa
+    label.unit hpa (Load current pressure using the box below)
 
+  fieldset
+    legend Get current pressure (default location Helsingin seutukunta)
+
+    label.label Latitude
+    input(type="number", v-model="lat")
+    label.unit deg
+
+    label.label Longitude
+    input(type="number", v-model="lng")
+    label.unit deg
+
+    button(@click="get_pressure") Get pressure
+
+  h2 Results
   table.results
     tr(v-for="row in rows")
       td(v-for="e in row") {{e}}
 
-  p height = ground + flight_level + offset
+  h2 Formula
+  p altitude = flight_level + offset
   p offset = 44308 * ((pressure / 1013.25) ^ 0.190284 - 1)
 </template>
 
@@ -130,14 +154,16 @@ export default {
     display grid
     grid-template-columns auto auto 1fr
     gap 0.5em
-    border none
-    padding 0
+
+    legend
+      font-size 110%
+      color #444
 
     label.label
       font-weight bold
 
     input
-      max-width 5em
+      max-width 6em
 
   table.results
     border-collapse collapse

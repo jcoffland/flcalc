@@ -2,7 +2,7 @@
 
                   This file is part of the Flight Level Calcualtor.
 
-         flcalc computes flight levels from pressure and ground alititude.
+             flcalc computes flight levels from pressure at sea level.
                       Copyright (c) 2023, Joseph Coffland
                                All rights reserved.
 
